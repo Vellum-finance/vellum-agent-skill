@@ -17,16 +17,10 @@
 
 ---
 
-## Install as Global CLI (`vellum` command)
+## Install as Global
 
 ```bash
 npm install -g https://github.com/Vellum-finance/vellum-agent-skill
-```
-
-Verify:
-
-```bash
-vellum --help
 ```
 
 ---
