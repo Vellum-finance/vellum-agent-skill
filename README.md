@@ -23,12 +23,6 @@
 npm install -g https://github.com/Vellum-finance/vellum-agent-skill
 ```
 
-Verify:
-
-```bash
-vellum --help
-```
-
 ---
 
 ## Install as Agent Skill
