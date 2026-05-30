@@ -12,8 +12,7 @@
     "skills"
   ],
   "scripts": {
-    "test": "node cli.js agent register --name TestAgent",
-    "publish": "npm publish --access public"
+    "test": "node cli.js agent register --name TestAgent"
   },
   "keywords": [
     "ai-agent",
