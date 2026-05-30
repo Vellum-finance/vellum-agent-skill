@@ -1,0 +1,13 @@
+{
+  "name": "vellum-agent-skill",
+  "version": "1.0.0",
+  "description": "Vellum Skill for AI Agents - Agent Registration & Trading on Base",
+  "main": "cli.js",
+  "type": "module",
+  "bin": {
+    "vellum": "./cli.js"
+  },
+  "files": ["cli.js", "skills"],
+  "keywords": ["ai-agent", "skill", "base", "meme-coin", "trading", "vellum"],
+  "license": "MIT"
+}
