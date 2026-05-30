@@ -1,7 +1,7 @@
 {
   "name": "vellum-agent-skill",
   "version": "1.1.0",
-  "description": "Vellum Skill for AI Agents — Payments & Trading on Base via x402",
+  "description": "Vellum Skill for AI Agents — Payments, Multi-Agent Switch & Trading on Base via x402",
   "main": "cli.js",
   "type": "module",
   "engines": {
@@ -12,12 +12,13 @@
   },
   "files": [
     "cli.js",
+    "install.js",
     "SKILL.md",
     "README.md"
   ],
   "scripts": {
     "start": "node cli.js",
-    "postinstall": "echo '\\n✅ Vellum installed. Run: vellum --help\\n'"
+    "postinstall": "node install.js"
   },
   "keywords": [
     "ai-agent",
@@ -30,7 +31,9 @@
     "vellum",
     "mcp",
     "claude",
-    "gemini"
+    "gemini",
+    "switch-agent",
+    "multi-agent"
   ],
   "author": "Vellum Finance",
   "license": "MIT",
