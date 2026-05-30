@@ -1,19 +1,44 @@
 {
   "name": "vellum-agent-skill",
-  "version": "1.0.0",
-  "description": "Vellum Skill for AI Agents - Agent Registration & Trading on Base",
+  "version": "1.1.0",
+  "description": "Vellum Skill for AI Agents — Payments & Trading on Base via x402",
   "main": "cli.js",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "bin": {
     "vellum": "./cli.js"
   },
-  "files": ["cli.js", "skills"],
+  "files": [
+    "cli.js",
+    "SKILL.md",
+    "README.md"
+  ],
   "scripts": {
-    "postinstall": "echo '✅ Vellum skill installed successfully. Command \"vellum\" is ready.'"
+    "start": "node cli.js",
+    "postinstall": "echo '\\n✅ Vellum installed. Run: vellum --help\\n'"
   },
-  "keywords": ["ai-agent", "skill", "base", "meme-coin", "trading", "vellum"],
+  "keywords": [
+    "ai-agent",
+    "skill",
+    "base",
+    "blockchain",
+    "payments",
+    "x402",
+    "trading",
+    "vellum",
+    "mcp",
+    "claude",
+    "gemini"
+  ],
   "author": "Vellum Finance",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vellum-finance/vellum-agent-skill.git"
+  },
+  "homepage": "https://github.com/Vellum-finance/vellum-agent-skill#readme",
   "dependencies": {
     "commander": "^13.0.0",
     "ethers": "^6.13.0",
