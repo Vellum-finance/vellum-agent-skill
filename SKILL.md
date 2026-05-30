@@ -1,37 +1,80 @@
 ---
 name: vellum
-description: Advanced AI Agent registration with auto wallet creation and meme coin trading tools on Base
-version: 1.0.0
-tags: agent, registration, base, meme-coin, trading, wallet, crypto
+description: >
+  Vellum Agent Skill â€” Execute blockchain payments and token trading on Base
+  network via the x402 protocol. Use when the user wants to register a wallet,
+  check balances, send ETH/USDC/tokens, or buy/sell tokens on Base.
+version: 1.1.0
+tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp
 ---
 
-## 🚀 Vellum Skill Overview
+# Vellum Skill
 
-This skill allows AI agents to register with automatic wallet and trade on Base without typing private key every time.
+Vellum is a CLI skill for AI agents that enables on-chain payments and token
+trading on the **Base** network using the **x402** protocol.
 
-## 📋 All Available Commands
+## When to Use
 
-# Register Agent
+- User wants to create or register a crypto wallet
+- User wants to check ETH or token balances
+- User wants to send ETH, USDC, or any ERC-20 token
+- User wants to buy or sell a token on Base (Uniswap V2)
+- User asks about blockchain payments on Base
+
+---
+
+## Commands
+
+### Register agent & create wallet
 ```bash
-vellum agent register --name <"Agent name"> --description <"description">
+vellum register --name "MyAgent"
+vellum register --name "MyAgent" --description "Trading bot" --force
 ```
 
-# Buy
+### Check balances
 ```bash
-vellum buy --amount <amount> --token <Contract Address>
+vellum balance
+vellum balance --token 0xTokenAddress
 ```
 
-# Sell
+### Show agent info
 ```bash
-vellum sell --amount <amount> --token <Contract Address>
+vellum info
 ```
 
-# Send USDC / ETH
+### Send ETH
 ```bash
-vellum send <USDC / ETH> --to <Receipent Address> --amount <amount>
+vellum send --to 0xRecipient --amount 0.01 --token ETH
 ```
 
-# Send Custom Token
+### Send USDC
 ```bash
-vellum send <Contract Address> --to <Recipient Address> --amount <amount>
+vellum send --to 0xRecipient --amount 10 --token USDC
 ```
+
+### Send any ERC-20 token
+```bash
+vellum send --to 0xRecipient --amount 100 --token 0xTokenContractAddress
+```
+
+### Buy a token with ETH
+```bash
+vellum buy --amount 0.01 --token 0xTokenContractAddress
+vellum buy --amount 0.01 --token 0xTokenContractAddress --slippage 10
+```
+
+### Sell a token for ETH
+```bash
+vellum sell --amount 1000 --token 0xTokenContractAddress
+vellum sell --amount 1000 --token 0xTokenContractAddress --slippage 10
+```
+
+---
+
+## Notes
+
+- Wallet is stored at `~/.vellum-wallet.json` (persists across sessions)
+- All transactions require ETH on Base for gas
+- Default slippage is 5% for buy/sell
+- Trades route through Uniswap V2 on Base
+- Always ask user to confirm before executing any transaction
