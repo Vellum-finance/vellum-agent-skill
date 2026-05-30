@@ -21,4 +21,13 @@ Tell the AI Agent naturally, for example:
 
 ```bash
 # Register Agent
-vellum agent register --name "AlphaTrader" --description "Meme coin sniper agent"
+vellum agent register --name <"Agent name"> --description <"description">
+
+# Buy 
+vellum buy <amount> eth <contract address>
+
+# Sell
+vellum sell --amount <amount> --token <contract address>
+
+# Send
+vellum send <token> --to <Recipient Address> --amount <amount>
