@@ -14,11 +14,13 @@
 ```bash
 npx skills add https://github.com/vellum-finance/vellum-agent-skill
 
-📖Introduction
+```
+
+### 📖Introduction
 
 Vellum Agent Skill is a comprehensive CLI-based skill developed specifically for modern AI Agents. It bridges the gap between intelligent AI systems and real blockchain operations by providing a complete set of tools for agent registration, wallet management, meme coin trading, and asset transfer — all while maintaining high security standards.This skill transforms your AI agent from a simple conversational tool into a semi-autonomous crypto operator capable of executing real on-chain actions on the Base network.
 
-✨ Key Features
+#### ✨ Key Features
 
 Agent Registration System — Auto-generates unique Agent ID + Base wallet
 Meme Coin Trading — Buy any token instantly using contract address
@@ -27,7 +29,7 @@ Asset Transfer — Send ETH and USDC safely
 Secure Private Key Handling — Private key is prompted interactively, never shown in terminal history
 AI Agent Optimized — Designed to work perfectly with Claude, Cursor, Grok, and other AI coding agents
 
-Repository Structure
+##### Repository Structure
 
 vellum-agent-skill/
 ├── skills/
@@ -39,6 +41,6 @@ vellum-agent-skill/
 ├── .gitignore
 └── vellum-agents.json (generated automatically)
 
-License
+###### License
 
 This project is licensed under the MIT License. You are free to use, modify, fork, and distribute this skill for both personal and commercial purposes.
