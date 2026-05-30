@@ -11,26 +11,27 @@ This skill allows AI agents to register with automatic wallet and trade on Base 
 
 ## 📋 All Available Commands
 
-```bash
 # Register Agent
-vellum agent register --name <"agent name"> --description <"description">
+```bash
+vellum agent register --name <"Agent name"> --description <"description">
 ```
 
-```
 # Buy
+```bash
 vellum buy --amount <amount> --token <Contract Address>
 ```
 
-```
 # Sell
+```bash
 vellum sell --amount <amount> --token <Contract Address>
 ```
 
-```
 # Send USDC / ETH
+```bash
 vellum send <USDC / ETH> --to <Receipent Address> --amount <amount>
 ```
-```
-Send Custom Token
+
+# Send Custom Token
+```bash
 vellum send <Contract Address> --to <Recipient Address> --amount <amount>
 ```
