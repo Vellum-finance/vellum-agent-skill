@@ -16,6 +16,22 @@ npx skills add https://github.com/vellum-finance/vellum-agent-skill
 
 ```
 
+## 🚀 How to Install & Use
+
+# 1. Install skill
+```bash
+npx skills add https://github.com/Vellum-finance/vellum-agent-skill --force
+```
+
+# 2. Activate for global command
+```bash
+cd ~/.agents/skills/vellum-agent-skill
+```
+
+```bash
+npm install -g
+```
+
 ### 📖Introduction
 
 Vellum Agent Skill is a comprehensive CLI-based skill developed specifically for modern AI Agents. It bridges the gap between intelligent AI systems and real blockchain operations by providing a complete set of tools for agent registration, wallet management, meme coin trading, and asset transfer — all while maintaining high security standards.This skill transforms your AI agent from a simple conversational tool into a semi-autonomous crypto operator capable of executing real on-chain actions on the Base network.
