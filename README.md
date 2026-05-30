@@ -108,10 +108,10 @@ vellum sell --amount 1000 --token 0xContractAddress --slippage 10
 
 ```
 vellum-agent-skill/
-â”œâ”€â”€ cli.js          â† Main CLI (all commands)
-â”œâ”€â”€ package.json    â† npm config + global bin
-â”œâ”€â”€ SKILL.md        â† Agent skill manifest
-â””â”€â”€ README.md       â† This file
+├── cli.js
+├── package.json
+├── SKILL.md
+└── README.md
 ```
 
 ---
