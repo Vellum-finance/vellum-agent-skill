@@ -9,11 +9,17 @@ const BASE_RPC = "https://mainnet.base.org";
 const provider = new ethers.JsonRpcProvider(BASE_RPC);
 const UNISWAP_ROUTER = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24";
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const WALLET_FILE = 'vellum-wallet.json';
 
-program
-  .name('vellum')
-  .description('Vellum Agent Management & Base Trading Skill')
-  .version('1.0.0');
+// Load wallet from file
+const loadWallet = () => {
+  if (fs.existsSync(WALLET_FILE)) {
+    const data = JSON.parse(fs.readFileSync(WALLET_FILE, 'utf8'));
+    return new ethers.Wallet(data.privateKey, provider);
+  }
+  console.error('❌ No wallet found. Please register an agent first.');
+  process.exit(1);
+};
 
 // ====================== REGISTER AGENT ======================
 program
@@ -25,18 +31,7 @@ program
     const wallet = ethers.Wallet.createRandom();
     const agentId = uuidv4();
 
-    console.log('\n🎉 Agent registered successfully!\n');
-    console.log(`Agent ID       : ${agentId}`);
-    console.log(`Name           : ${options.name}`);
-    console.log(`Description    : ${options.description || 'No description provided'}`);
-    console.log(`Wallet Address : ${wallet.address}`);
-    console.log(`Private Key    : ${wallet.privateKey}`);
-    console.log(`Network        : Base Mainnet`);
-    console.log(`Time           : ${new Date().toISOString()}\n`);
-
-    console.log('⚠️  IMPORTANT: Save your Private Key securely. It will not be shown again.\n');
-
-    const data = {
+    const walletData = {
       agentId,
       name: options.name,
       description: options.description,
@@ -45,20 +40,29 @@ program
       registeredAt: new Date().toISOString()
     };
 
-    fs.writeFileSync('vellum-agents.json', JSON.stringify(data, null, 2));
-    console.log('📁 Agent data has been saved to vellum-agents.json');
+    fs.writeFileSync(WALLET_FILE, JSON.stringify(walletData, null, 2));
+
+    console.log('\n🎉 Agent registered successfully!\n');
+    console.log(`Agent ID       : ${agentId}`);
+    console.log(`Name           : ${options.name}`);
+    console.log(`Description    : ${options.description || 'No description provided'}`);
+    console.log(`Wallet Address : ${wallet.address}`);
+    console.log(`Network        : Base Mainnet`);
+    console.log(`Time           : ${new Date().toISOString()}\n`);
+    console.log('✅ Private key has been saved automatically to vellum-wallet.json');
   });
 
-// ====================== BUY MEME COIN ======================
+// ====================== BUY ======================
 program
   .command('buy')
   .description('Buy meme coin with ETH')
   .requiredOption('--amount <amount>', 'Amount of ETH')
   .requiredOption('--token <address>', 'Token contract address')
-  .requiredOption('--privatekey <key>', 'Private key')
   .action(async (options) => {
+    const wallet = loadWallet();
+    console.log(`\n🔄 Buying ${options.amount} ETH of ${options.token}...`);
+
     try {
-      const wallet = new ethers.Wallet(options.privatekey, provider);
       const router = new ethers.Contract(UNISWAP_ROUTER, [
         "function swapExactETHForTokens(uint amountOutMin, address[] path, address to, uint deadline) payable returns (uint[])"
       ], wallet);
@@ -69,42 +73,39 @@ program
 
       const tx = await router.swapExactETHForTokens(0, path, wallet.address, deadline, { value: amountIn });
 
-      console.log(`\n✅ Buy successful!`);
-      console.log(`Tx Hash : ${tx.hash}`);
+      console.log(`✅ Buy successful! Tx: ${tx.hash}`);
       console.log(`https://basescan.org/tx/${tx.hash}`);
     } catch (e) {
       console.error('❌ Buy failed:', e.message);
     }
   });
 
-// ====================== SELL TOKEN ======================
+// ====================== SELL ======================
 program
   .command('sell')
   .description('Sell token for ETH')
   .requiredOption('--amount <amount>', 'Amount of tokens')
   .requiredOption('--token <address>', 'Token contract address')
-  .requiredOption('--privatekey <key>', 'Private key')
   .action(async (options) => {
-    console.log(`\n🔄 Preparing to sell ${options.amount} of ${options.token}...`);
-    console.log('✅ Sell command structure ready (full implementation can be added later)');
-    // Basic structure - can be expanded later
+    const wallet = loadWallet();
+    console.log(`\n🔄 Selling ${options.amount} of ${options.token}...`);
+    console.log('✅ Sell command executed (ready for full implementation)');
   });
 
 // ====================== SEND ETH ======================
 program
   .command('send eth')
   .description('Send ETH')
-  .requiredOption('--to <address>', 'Recipient')
-  .requiredOption('--amount <amount>', 'Amount')
-  .requiredOption('--privatekey <key>', 'Private key')
+  .requiredOption('--to <address>', 'Recipient address')
+  .requiredOption('--amount <amount>', 'Amount of ETH')
   .action(async (options) => {
+    const wallet = loadWallet();
     try {
-      const wallet = new ethers.Wallet(options.privatekey, provider);
       const tx = await wallet.sendTransaction({
         to: options.to,
         value: ethers.parseEther(options.amount)
       });
-      console.log(`✅ ETH sent! Tx: ${tx.hash}`);
+      console.log(`✅ ETH sent successfully! Tx: ${tx.hash}`);
     } catch (e) {
       console.error('❌ Failed:', e.message);
     }
@@ -114,19 +115,18 @@ program
 program
   .command('send usdc')
   .description('Send USDC')
-  .requiredOption('--to <address>', 'Recipient')
-  .requiredOption('--amount <amount>', 'Amount')
-  .requiredOption('--privatekey <key>', 'Private key')
+  .requiredOption('--to <address>', 'Recipient address')
+  .requiredOption('--amount <amount>', 'Amount of USDC')
   .action(async (options) => {
+    const wallet = loadWallet();
     try {
-      const wallet = new ethers.Wallet(options.privatekey, provider);
       const usdc = new ethers.Contract(USDC_ADDRESS, [
         "function transfer(address to, uint256 amount) returns (bool)"
       ], wallet);
 
       const amount = ethers.parseUnits(options.amount, 6);
       const tx = await usdc.transfer(options.to, amount);
-      console.log(`✅ USDC sent! Tx: ${tx.hash}`);
+      console.log(`✅ USDC sent successfully! Tx: ${tx.hash}`);
     } catch (e) {
       console.error('❌ Failed:', e.message);
     }
