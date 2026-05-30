@@ -1,7 +1,7 @@
 {
   "name": "vellum-agent-skill",
   "version": "1.0.0",
-  "description": "Vellum Skill for AI Agents - Agent Registration with Auto Wallet + Meme Coin Trading on Base",
+  "description": "Vellum Skill for AI Agents - Agent Registration & Trading on Base",
   "main": "cli.js",
   "type": "module",
   "bin": {
@@ -9,9 +9,9 @@
   },
   "files": ["cli.js", "skills"],
   "scripts": {
-    "test": "node cli.js agent register --name TestAgent"
+    "postinstall": "echo '✅ Vellum skill installed successfully. Command \"vellum\" is ready.'"
   },
-  "keywords": ["ai-agent", "skill", "base", "ethereum", "meme-coin", "trading", "vellum"],
+  "keywords": ["ai-agent", "skill", "base", "meme-coin", "trading", "vellum"],
   "author": "Vellum Finance",
   "license": "MIT",
   "dependencies": {
