@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/Network-Base_Blockchain-purple.svg)](https://base.org)
 [![Protocol](https://img.shields.io/badge/Protocol-x402-gold.svg)](https://x402.org)
 
-**The Official Vellum Skill for AI Agents** â€” On-chain payments and token trading on Base via the x402 protocol. Works with Claude, Gemini, GPT, Hermes, Openclaw, and any MCP-compatible agent.
+**The Official Vellum Skill for AI Agents** — On-chain payments, multi-agent switching, and token trading on Base via the x402 protocol. Works with Claude, Gemini, GPT, Hermes, Openclaw, and any MCP-compatible agent.
 
 ---
 
@@ -17,10 +17,16 @@
 
 ---
 
-## Install as Global
+## Install as Global CLI (`vellum` command)
 
 ```bash
 npm install -g https://github.com/Vellum-finance/vellum-agent-skill
+```
+
+Verify:
+
+```bash
+vellum --help
 ```
 
 ---
@@ -31,25 +37,38 @@ npm install -g https://github.com/Vellum-finance/vellum-agent-skill
 npx skills add https://github.com/Vellum-finance/vellum-agent-skill
 ```
 
+> The `postinstall` hook runs automatically and installs `vellum` globally for you.
+
 ---
 
 ## Commands
 
-### Register â€” create wallet
+### Register — create wallet
 ```bash
 vellum register --name "MyAgent"
 vellum register --name "MyAgent" --description "Trading bot" --force
+```
+
+### List all registered agents ⭐
+```bash
+vellum agents
+```
+
+### Switch active agent ⭐
+```bash
+vellum use --id <agentId>
+vellum switch --id <agentId>   # alias
+```
+
+### Info — show active agent details
+```bash
+vellum info
 ```
 
 ### Balance
 ```bash
 vellum balance
 vellum balance --token 0xTokenAddress
-```
-
-### Info â€” show agent details
-```bash
-vellum info
 ```
 
 ### Send ETH
@@ -81,17 +100,44 @@ vellum sell --amount 1000 --token 0xContractAddress --slippage 10
 
 ---
 
+## Multi-Agent Workflow
+
+```bash
+# Register multiple agents
+vellum register --name "TradingBot"
+# → Agent ID: a1b2c3d4-xxxx-...
+
+vellum register --name "PaymentBot"
+# → Agent ID: e5f6g7h8-xxxx-...
+
+# See all agents
+vellum agents
+# ▶ [ACTIVE] PaymentBot  e5f6g7h8-...
+#            TradingBot  a1b2c3d4-...
+
+# Switch to TradingBot
+vellum use --id a1b2c3d4-xxxx-...
+
+# Confirm
+vellum info
+# → Active: TradingBot
+```
+
+---
+
 ## How it works
 
 | Step | What happens |
 |------|-------------|
 | `register` | Creates a non-custodial ETH wallet, saves to `~/.vellum-wallet.json` |
+| `agents` | Lists all registered agents and shows which is active |
+| `use` / `switch` | Switches active agent by agentId; all commands use that wallet |
 | `balance` | Reads ETH + USDC (+ optional token) balance from Base RPC |
 | `send` | Transfers ETH, USDC, or any ERC-20 directly on-chain |
-| `buy` | Swaps ETH â†’ token via Uniswap V2 on Base |
-| `sell` | Approves + swaps token â†’ ETH via Uniswap V2 on Base |
+| `buy` | Swaps ETH → token via Uniswap V2 on Base |
+| `sell` | Approves + swaps token → ETH via Uniswap V2 on Base |
 
-- Wallet is stored globally at `~/.vellum-wallet.json`
+- Wallet stored at `~/.vellum-wallet.json` (persists across sessions, multi-agent)
 - All transactions broadcast to **Base Mainnet**
 - Trades route through **Uniswap V2** on Base
 - Confirmation prompt before every transaction
@@ -102,14 +148,22 @@ vellum sell --amount 1000 --token 0xContractAddress --slippage 10
 
 ```
 vellum-agent-skill/
-├── cli.js
-├── package.json
-├── SKILL.md
-└── README.md
+├── cli.js          ← Main CLI (all commands including use/switch/agents)
+├── install.js      ← Auto global install + file protection
+├── package.json    ← npm config + postinstall hook
+├── SKILL.md        ← Agent skill manifest (read-only)
+└── README.md       ← This file
 ```
+
+---
+
+## File Protection
+
+After install, core files are marked **read-only** (`chmod 444`) to prevent
+modification by agents or automated processes.
 
 ---
 
 ## License
 
-MIT â€” free to use, modify, fork, and distribute.
+MIT — free to use
