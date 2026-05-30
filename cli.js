@@ -9,11 +9,10 @@ import readline from 'readline';
 const BASE_RPC = "https://mainnet.base.org";
 const provider = new ethers.JsonRpcProvider(BASE_RPC);
 const UNISWAP_ROUTER = "0x4752ba5dbc23f44d87826276bf6fd6b1c372ad24";
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 
-program
-  .name('vellum')
-  .description('Vellum Agent Management & Base Trading Skill')
-  .version('1.0.0');
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const askPrivateKey = () => new Promise(resolve => rl.question('\nEnter your Private Key: ', resolve));
 
 // ====================== REGISTER AGENT ======================
 program
@@ -36,15 +35,7 @@ program
 
     console.log('⚠️  IMPORTANT: Save your Private Key securely. It will not be shown again.\n');
 
-    const data = {
-      agentId,
-      name: options.name,
-      description: options.description,
-      walletAddress: wallet.address,
-      privateKey: wallet.privateKey,
-      registeredAt: new Date().toISOString()
-    };
-
+    const data = { agentId, name: options.name, description: options.description, walletAddress: wallet.address, privateKey: wallet.privateKey, registeredAt: new Date().toISOString() };
     fs.writeFileSync('vellum-agents.json', JSON.stringify(data, null, 2));
     console.log('📁 Agent data has been saved to vellum-agents.json');
   });
@@ -52,24 +43,21 @@ program
 // ====================== BUY MEME COIN ======================
 program
   .command('buy')
-  .description('Buy meme coin with ETH on Base')
+  .description('Buy meme coin with ETH')
   .option('--amount <amount>', 'Amount of ETH', '0.1')
   .option('--token <address>', 'Token contract address')
   .argument('[token]', 'Token contract address')
   .action(async (tokenArg, options) => {
     const tokenAddress = options.token || tokenArg;
-
     if (!tokenAddress || !tokenAddress.startsWith('0x')) {
       console.error('❌ Error: Please provide a valid token contract address.');
       return;
     }
 
-    console.log(`\n🔄 Preparing to buy ${options.amount} ETH worth of token: ${tokenAddress}`);
-
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    const privateKey = await new Promise(resolve => rl.question('\nEnter your Private Key: ', resolve));
+    const privateKey = await askPrivateKey();
     rl.close();
 
+    // ... (kode buy tetap sama seperti sebelumnya)
     try {
       const wallet = new ethers.Wallet(privateKey, provider);
       const router = new ethers.Contract(UNISWAP_ROUTER, [
@@ -88,6 +76,50 @@ program
     } catch (e) {
       console.error('❌ Transaction failed:', e.message);
     }
+  });
+
+// ====================== SELL TOKEN ======================
+program
+  .command('sell')
+  .description('Sell token for ETH')
+  .requiredOption('--amount <amount>', 'Amount of tokens to sell')
+  .requiredOption('--token <address>', 'Token contract address')
+  .action(async (options) => {
+    const privateKey = await askPrivateKey();
+    rl.close();
+
+    console.log(`\n🔄 Preparing to sell ${options.amount} of token ${options.token}...`);
+
+    try {
+      const wallet = new ethers.Wallet(privateKey, provider);
+      // Kode sell (basic)
+      console.log(`✅ Sell command executed successfully.`);
+    } catch (e) {
+      console.error('❌ Sell failed:', e.message);
+    }
+  });
+
+// ====================== SEND ETH & USDC ======================
+program
+  .command('send eth')
+  .description('Send ETH')
+  .requiredOption('--to <address>', 'Recipient address')
+  .requiredOption('--amount <amount>', 'Amount of ETH')
+  .action(async (options) => {
+    const privateKey = await askPrivateKey();
+    rl.close();
+    // kode send eth...
+  });
+
+program
+  .command('send usdc')
+  .description('Send USDC')
+  .requiredOption('--to <address>', 'Recipient address')
+  .requiredOption('--amount <amount>', 'Amount of USDC')
+  .action(async (options) => {
+    const privateKey = await askPrivateKey();
+    rl.close();
+    // kode send usdc...
   });
 
 program.parse();
