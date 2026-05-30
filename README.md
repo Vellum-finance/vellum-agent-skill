@@ -25,7 +25,7 @@ npx skills add https://github.com/Vellum-finance/vellum-agent-skill --force
 
 # 2. Activate for global command
 ```bash
-cd ~/.agents/skills/vellum-agent-skill
+cd ~/.agents/skills/vellum
 ```
 
 ```bash
