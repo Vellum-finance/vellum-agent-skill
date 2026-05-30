@@ -7,23 +7,11 @@
   "bin": {
     "vellum": "./cli.js"
   },
-  "files": [
-    "cli.js",
-    "skills"
-  ],
+  "files": ["cli.js", "skills"],
   "scripts": {
     "test": "node cli.js agent register --name TestAgent"
   },
-  "keywords": [
-    "ai-agent",
-    "skill",
-    "base",
-    "ethereum",
-    "meme-coin",
-    "trading",
-    "vellum",
-    "crypto"
-  ],
+  "keywords": ["ai-agent", "skill", "base", "ethereum", "meme-coin", "trading", "vellum"],
   "author": "Vellum Finance",
   "license": "MIT",
   "dependencies": {
