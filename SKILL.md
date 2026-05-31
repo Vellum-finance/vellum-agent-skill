@@ -2,14 +2,14 @@
 name: vellum
 description: >
   Vellum Agent Skill — Execute blockchain payments and token trading on Base network
-  via the x402 protocol. ALWAYS use this skill when the user mentions: registering a
-  wallet, checking ETH/USDC/token balances, sending crypto, buying or selling tokens
-  on Base, switching between agents (vellum use / vellum switch), listing agents
-  (vellum agents), or running ANY `vellum` command. Do not skip this skill for vague
-  requests like "check my balance", "switch agent", or "register" — those almost
-  certainly mean Vellum.
-version: 1.1.0
-tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp, switch-agent
+  via the x402 protocol with Uniswap V2, V3, and V4 auto-routing. ALWAYS use this
+  skill when the user mentions: registering a wallet, checking ETH/USDC/token balances,
+  sending crypto, buying or selling tokens on Base (any DEX), switching between agents
+  (vellum use / vellum switch), listing agents (vellum agents), or running ANY `vellum`
+  command. Do not skip for vague requests like "check balance", "switch agent", "buy token"
+  or "register" — those almost certainly mean Vellum.
+version: 1.2.0
+tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp, uniswap-v4, uniswap-v3, switch-agent
 readonly: true
 postInstall: node install.js
 ---
@@ -19,12 +19,9 @@ postInstall: node install.js
 > ⚠️ **READ-ONLY SKILL** — Files `cli.js`, `install.js`, `SKILL.md`, `package.json`, `README.md`
 > must NOT be modified, overwritten, or deleted by any agent or process.
 
-Vellum is a CLI skill for AI agents enabling on-chain payments and token trading on
-the **Base** network via the **x402** protocol. Supports **multiple registered agents**
-with seamless switching by `agentId`.
-
-When installed via `npx skills add`, the `postInstall` hook runs `node install.js`
-which calls `npm install -g` automatically — making `vellum` available globally in terminal.
+Vellum is a CLI skill for AI agents enabling on-chain payments and token trading on the
+**Base** network via the **x402** protocol. Supports **Uniswap V2, V3, and V4** with
+**automatic best-price routing** and **multiple registered agents** with seamless switching.
 
 ---
 
@@ -33,7 +30,7 @@ which calls `npm install -g` automatically — making `vellum` available globall
 - User wants to register a crypto wallet or agent
 - User wants to check ETH, USDC, or token balances
 - User wants to send ETH, USDC, or any ERC-20 token
-- User wants to buy or sell a token on Base (Uniswap V2)
+- User wants to buy or sell a token on Base
 - **User wants to switch between registered agents** → `vellum use` or `vellum switch`
 - **User wants to list all agents** → `vellum agents`
 - User references an `agentId` from previous `vellum register` output
@@ -50,9 +47,6 @@ vellum register --name "MyAgent"
 vellum register --name "MyAgent" --description "Trading bot" --force
 ```
 
-After registration an **agentId** (UUID) is printed and saved.
-Multiple agents can be registered — each gets its own wallet.
-
 ---
 
 ### List all agents
@@ -61,39 +55,13 @@ Multiple agents can be registered — each gets its own wallet.
 vellum agents
 ```
 
-Output shows all registered agents, which one is currently active (▶), their IDs, and addresses.
-
 ---
 
-### Switch active agent ⭐ NEW
-
-Switch between registered agents using the `agentId` from `vellum register` or `vellum agents`:
+### Switch active agent
 
 ```bash
-# Switch by agentId
 vellum use --id <agentId>
-
-# Alias: switch
-vellum switch --id <agentId>
-```
-
-**Example flow:**
-```bash
-vellum register --name "TradingBot"
-# ✅ Agent registered!  Agent ID: a1b2c3d4-xxxx-...
-
-vellum register --name "PaymentBot"
-# ✅ Agent registered!  Agent ID: e5f6g7h8-xxxx-...
-
-vellum agents
-# ▶ [ACTIVE] PaymentBot  (e5f6g7h8...)
-#            TradingBot  (a1b2c3d4...)
-
-vellum use --id a1b2c3d4-xxxx-...
-# ✅ Switched active agent! → TradingBot
-
-vellum info
-# Shows TradingBot as active
+vellum switch --id <agentId>   # alias
 ```
 
 ---
@@ -113,66 +81,68 @@ vellum balance
 vellum balance --token 0xTokenAddress
 ```
 
-### Send ETH
+---
+
+### Buy a token — Auto-routes V4 → V3 → V2 for best price
 
 ```bash
-vellum send --to 0xRecipient --amount 0.01 --token ETH
-```
+# Auto (best price across V2+V3+V4)
+vellum buy --amount 0.01 --token 0xTokenAddress
 
-### Send USDC
+# With custom slippage
+vellum buy --amount 0.01 --token 0xTokenAddress --slippage 10
 
-```bash
-vellum send --to 0xRecipient --amount 10 --token USDC
-```
-
-### Send any ERC-20 token
-
-```bash
-vellum send --to 0xRecipient --amount 100 --token 0xTokenContractAddress
-```
-
-### Buy a token with ETH
-
-```bash
-vellum buy --amount 0.01 --token 0xTokenContractAddress
-vellum buy --amount 0.01 --token 0xTokenContractAddress --slippage 10
-```
-
-### Sell a token for ETH
-
-```bash
-vellum sell --amount 1000 --token 0xTokenContractAddress
-vellum sell --amount 1000 --token 0xTokenContractAddress --slippage 10
+# Force specific DEX
+vellum buy --amount 0.01 --token 0xTokenAddress --dex v4
+vellum buy --amount 0.01 --token 0xTokenAddress --dex v3
+vellum buy --amount 0.01 --token 0xTokenAddress --dex v2
 ```
 
 ---
 
-## Wallet File Format (multi-agent)
+### Sell a token — Auto-routes V4 → V3 → V2 for best price
 
-```json
-{
-  "activeAgentId": "uuid-of-active-agent",
-  "agents": [
-    {
-      "agentId": "uuid-1",
-      "name": "TradingBot",
-      "walletAddress": "0x...",
-      "privateKey": "0x...",
-      "registeredAt": "ISO date"
-    }
-  ]
-}
+```bash
+# Auto (best price)
+vellum sell --amount 1000 --token 0xTokenAddress
+
+# Force specific DEX
+vellum sell --amount 1000 --token 0xTokenAddress --dex v4
+vellum sell --amount 1000 --token 0xTokenAddress --dex v3
 ```
 
-Stored at `~/.vellum-wallet.json` — backward compatible with legacy single-agent format.
+---
+
+### Send ETH / USDC / ERC-20
+
+```bash
+vellum send --to 0xRecipient --amount 0.01 --token ETH
+vellum send --to 0xRecipient --amount 10 --token USDC
+vellum send --to 0xRecipient --amount 100 --token 0xContractAddress
+```
+
+---
+
+## DEX Router Addresses (Base Mainnet)
+
+| DEX | Contract | Address |
+|-----|----------|---------|
+| V2 | Router02 | `0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24` |
+| V3 | SwapRouter02 | `0x2626664c2603336E57B271c5C0b26F421741e481` |
+| V3 | QuoterV2 | `0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a` |
+| V4 | PoolManager | `0x498581ff718922c3f8e6a244956af099b2652b2b` |
+| V4 | UniversalRouter | `0x6fF5693b99212Da76ad316178A184AB56D299b43` |
+| V4 | Quoter | `0x0d5e0f971ed27fbff6c2837bf31316121532048d` |
+| V4 | StateView | `0xa3c0c9b65bad0b08107aa264b0f3db444b867a71` |
+| — | Permit2 | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
 ---
 
 ## Notes
 
+- Auto-routing checks V4 first (best liquidity on Base), falls back to V3, then V2
+- Use `--dex v2|v3|v4` to force a specific router
 - All transactions require ETH on Base for gas
 - Default slippage is 5% for buy/sell
-- Trades route through Uniswap V2 on Base
-- Always ask user to confirm before executing any transaction
-- `vellum use --id <agentId>` sets the active agent; all commands use that wallet
-- 
+- Confirmation prompt before every transaction
+- `vellum use --id <agentId>` sets active agent; all commands use that wallet
