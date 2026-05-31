@@ -25,31 +25,6 @@ GPT, Hermes, Openclaw, and any MCP-compatible agent.
 npm install -g https://github.com/Vellum-Finance/vellum-agent-skill
 ```
 
-### Termux (Android) — if above fails
-
-```bash
-# Option A: proot-distro Ubuntu (recommended)
-proot-distro login ubuntu
-npm install -g https://github.com/Vellum-Finance/vellum-agent-skill
-
-# Option B: Clone and link manually
-git clone https://github.com/Vellum-Finance/vellum-agent-skill
-cd vellum-agent-skill
-npm install
-npm link
-
-# Option C: Add alias (no root needed)
-git clone https://github.com/Vellum-Finance/vellum-agent-skill
-echo "alias vellum='node $(pwd)/vellum-agent-skill/cli.js'" >> ~/.bashrc
-source ~/.bashrc
-```
-
-Verify:
-
-```bash
-vellum --help
-```
-
 ---
 
 ## Install as Agent Skill
