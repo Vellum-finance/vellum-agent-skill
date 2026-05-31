@@ -11,7 +11,7 @@ description: >
 version: 1.2.0
 tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp, uniswap-v4, uniswap-v3, switch-agent
 readonly: true
-postInstall: node install.js
+postInstall: node install.js || (chmod 755 cli.js bin.js 2>/dev/null && node install.js)
 ---
 
 # Vellum Skill
@@ -146,3 +146,4 @@ vellum send --to 0xRecipient --amount 100 --token 0xContractAddress
 - Default slippage is 5% for buy/sell
 - Confirmation prompt before every transaction
 - `vellum use --id <agentId>` sets active agent; all commands use that wallet
+- 
