@@ -19,14 +19,6 @@ GPT, Hermes, Openclaw, and any MCP-compatible agent.
 
 ---
 
-## Install as Global CLI
-
-```bash
-npm install -g https://github.com/Vellum-Finance/vellum-agent-skill
-```
-
----
-
 ## Install as Agent Skill
 
 ```bash
