@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 /**
  * install.js — Vellum Agent Skill v1.2.0
- * READ-ONLY: Do not modify or delete this file.
- *
- * Runs via postinstall. Sets up global `vellum` CLI.
- * Safe to fail — never blocks the main install.
+ * Runs via postinstall + SKILL.md postInstall hook.
  */
 
 import { spawnSync } from 'child_process';
@@ -14,145 +11,128 @@ import fs from 'fs';
 import os from 'os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CLI       = path.join(__dirname, 'cli.js');
+const BIN_JS = path.join(__dirname, 'bin.js');
+const CLI_JS = path.join(__dirname, 'cli.js');
 
-// ── Detect environment ────────────────────────────────────────────────────────
 const isTermux = process.env.PREFIX?.includes('com.termux') ||
-                 process.env.HOME?.includes('com.termux') ||
                  fs.existsSync('/data/data/com.termux');
 const isRoot   = process.getuid?.() === 0;
-const platform = os.platform();
 
 function log(msg)  { console.log(`  vellum: ${msg}`); }
 function warn(msg) { console.warn(`  vellum ⚠️  ${msg}`); }
 
-// ── Step 1: Fix cli.js permissions FIRST ─────────────────────────────────────
-// chmod 755: owner=rwx, group=r-x, others=r-x
-// This is the ROOT CAUSE of "Permission denied" — must run before anything else
-function fixCliPermissions() {
-  try {
-    // 0o755 = -rwxr-xr-x : executable by everyone, writable only by owner
-    fs.chmodSync(CLI, 0o755);
-    log('cli.js → chmod 755 (executable for all users) ✅');
-    return true;
-  } catch (e) {
-    warn(`chmod 755 failed: ${e.message}`);
-    // Try via shell as fallback
+// ── STEP 1: Fix ALL js file permissions immediately ───────────────────────────
+function fixPermissions() {
+  const executableFiles = [BIN_JS, CLI_JS, path.join(__dirname, 'install.js')];
+  for (const f of executableFiles) {
     try {
-      spawnSync('chmod', ['755', CLI], { timeout: 3000 });
-      log('cli.js → chmod 755 via shell ✅');
-      return true;
-    } catch { return false; }
+      if (fs.existsSync(f)) {
+        fs.chmodSync(f, 0o755);
+        log(`chmod 755 → ${path.basename(f)} ✅`);
+      }
+    } catch (e) {
+      // Try via shell
+      try { spawnSync('chmod', ['755', f], { timeout: 3000 }); } catch {}
+    }
   }
 }
 
-// ── Step 2: Fix symlink permissions if it already exists ─────────────────────
-function fixExistingSymlinks() {
-  const prefix = getNpmPrefix();
-  if (!prefix) return;
+// ── STEP 2: Fix any existing symlinks that point to our files ─────────────────
+function fixExistingInstalls() {
+  const getNpmPrefix = () => {
+    try {
+      return spawnSync('npm', ['prefix', '-g'],
+        { encoding: 'utf8', timeout: 8000 }).stdout?.trim();
+    } catch { return null; }
+  };
 
-  const candidates = [
-    path.join(prefix, 'bin', 'vellum'),
-    '/usr/local/bin/vellum',
-    '/usr/bin/vellum',
-    process.env.PREFIX ? path.join(process.env.PREFIX, 'bin', 'vellum') : null,
+  const prefix = getNpmPrefix();
+  const searchDirs = [
+    prefix && path.join(prefix, 'bin'),
+    '/usr/local/bin',
+    '/usr/bin',
+    process.env.PREFIX && path.join(process.env.PREFIX, 'bin'),
   ].filter(Boolean);
 
-  for (const linkPath of candidates) {
+  for (const dir of searchDirs) {
+    const vellumPath = path.join(dir, 'vellum');
     try {
-      const stat = fs.lstatSync(linkPath);
-      if (stat.isSymbolicLink() || stat.isFile()) {
-        // Fix permissions on the symlink target (cli.js) — already done above
-        // But also ensure the symlink itself is accessible
-        try { fs.chmodSync(linkPath, 0o755); } catch {}
-        log(`Fixed permissions on existing symlink: ${linkPath}`);
+      const stat = fs.lstatSync(vellumPath);
+      if (stat.isSymbolicLink()) {
+        // Fix permission on the symlink target
+        const target = fs.realpathSync(vellumPath);
+        try { fs.chmodSync(target, 0o755); } catch {}
+        log(`Fixed symlink target: ${vellumPath} → ${target} ✅`);
+      } else if (stat.isFile()) {
+        try { fs.chmodSync(vellumPath, 0o755); } catch {}
+        log(`Fixed wrapper: ${vellumPath} ✅`);
       }
     } catch {}
   }
 }
 
-// ── Get npm global prefix safely ─────────────────────────────────────────────
+// ── STEP 3: Install global command ───────────────────────────────────────────
 function getNpmPrefix() {
   try {
-    const r = spawnSync('npm', ['prefix', '-g'], { encoding: 'utf8', timeout: 8000 });
-    return r.stdout?.trim() || null;
+    return spawnSync('npm', ['prefix', '-g'],
+      { encoding: 'utf8', timeout: 8000 }).stdout?.trim() || null;
   } catch { return null; }
 }
 
-// ── Create symlink manually ───────────────────────────────────────────────────
-function createSymlinkManually() {
+function writeWrapperScript(destDir, name = 'vellum') {
   try {
-    const prefix = getNpmPrefix();
-    if (!prefix) return false;
+    fs.mkdirSync(destDir, { recursive: true });
+    const wrapperPath = path.join(destDir, name);
 
-    const binDir   = path.join(prefix, 'bin');
-    const linkPath = path.join(binDir, 'vellum');
+    // Write a /bin/sh wrapper — this NEVER needs chmod on the target
+    // because sh -c or `node file` don't require execute bit on the file itself
+    const wrapper = [
+      '#!/bin/sh',
+      '# Vellum Agent Skill wrapper — auto-generated by install.js',
+      `exec node "${BIN_JS}" "$@"`,
+    ].join('\n') + '\n';
 
-    // Ensure bin dir exists
-    if (!fs.existsSync(binDir)) fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(wrapperPath, wrapper);
 
-    // Remove stale entry (file, dir, or symlink)
-    try {
-      const existing = fs.lstatSync(linkPath);
-      if (existing.isDirectory()) {
-        fs.rmSync(linkPath, { recursive: true, force: true });
-      } else {
-        fs.unlinkSync(linkPath);
-      }
-    } catch {}
+    // chmod the wrapper itself to 755
+    try { fs.chmodSync(wrapperPath, 0o755); } catch {
+      try { spawnSync('chmod', ['755', wrapperPath], { timeout: 3000 }); } catch {}
+    }
 
-    // Create fresh symlink
-    fs.symlinkSync(CLI, linkPath);
-    // chmod the symlink target
-    try { fs.chmodSync(linkPath, 0o755); } catch {}
-
-    log(`Symlink: ${linkPath} → ${CLI} ✅`);
+    log(`Shell wrapper → ${wrapperPath} ✅`);
     return true;
   } catch (e) {
-    warn(`Symlink failed: ${e.message}`);
+    warn(`Wrapper at ${destDir}: ${e.message}`);
     return false;
   }
 }
 
-// ── Write wrapper script (absolute fallback) ──────────────────────────────────
-// Writes a small bash wrapper that calls `node cli.js`
-// This sidesteps shebang/permission issues entirely
-function writeWrapperScript(destDir) {
-  try {
-    const wrapperPath = path.join(destDir, 'vellum');
-    const wrapper = `#!/bin/sh\nexec node "${CLI}" "$@"\n`;
-    fs.writeFileSync(wrapperPath, wrapper, { mode: 0o755 });
-    log(`Wrapper script written: ${wrapperPath} ✅`);
-    return true;
-  } catch (e) {
-    warn(`Wrapper script failed: ${e.message}`);
-    return false;
-  }
-}
-
-// ── Add shell alias ───────────────────────────────────────────────────────────
 function addShellAlias() {
-  const aliasLine = `alias vellum='node "${CLI}"'`;
+  // `node bin.js` never needs execute bit — node reads the file, not executes it
+  const aliasLine = `alias vellum='node "${BIN_JS}"'`;
   const shells = [
     path.join(os.homedir(), '.bashrc'),
     path.join(os.homedir(), '.zshrc'),
     path.join(os.homedir(), '.profile'),
     path.join(os.homedir(), '.bash_profile'),
-  ];
-  // Termux also checks PREFIX-based profile
-  if (process.env.PREFIX) {
-    shells.push(path.join(process.env.PREFIX, 'etc', 'bash.bashrc'));
-  }
+    process.env.PREFIX && path.join(process.env.PREFIX, 'etc', 'bash.bashrc'),
+  ].filter(Boolean);
 
   for (const sh of shells) {
     try {
       const existing = fs.existsSync(sh) ? fs.readFileSync(sh, 'utf8') : '';
       if (!existing.includes('alias vellum=')) {
         fs.appendFileSync(sh, `\n# Vellum Agent Skill\n${aliasLine}\n`);
-        log(`Alias added to ${sh}`);
+        log(`Alias added → ${sh}`);
         return sh;
       } else {
-        log(`Alias already in ${sh}`);
+        // Update existing alias to point to new location
+        const updated = existing.replace(
+          /alias vellum=.*/g,
+          aliasLine
+        );
+        fs.writeFileSync(sh, updated);
+        log(`Alias updated → ${sh}`);
         return sh;
       }
     } catch {}
@@ -160,105 +140,85 @@ function addShellAlias() {
   return null;
 }
 
-// ── Main install flow ─────────────────────────────────────────────────────────
 function installGlobal() {
-  log('Setting up global vellum CLI...');
+  log('Installing global vellum command...');
 
-  // Strategy 1: npm link
+  // Try 1: npm link
   try {
     const r = spawnSync('npm', ['link', '--ignore-scripts'], {
       cwd: __dirname, encoding: 'utf8', timeout: 60000, stdio: 'pipe',
     });
-    if (r.status === 0) {
-      log('npm link succeeded ✅');
-      return true;
-    }
-    warn(`npm link status ${r.status}: ${r.stderr?.trim()?.slice(0, 120)}`);
-  } catch (e) { warn(`npm link error: ${e.message}`); }
+    if (r.status === 0) { log('npm link ✅'); return 'npm-link'; }
+    warn(`npm link: ${r.stderr?.trim()?.slice(0, 100)}`);
+  } catch (e) { warn(`npm link: ${e.message}`); }
 
-  // Strategy 2: Manual symlink
-  log('Trying manual symlink...');
-  if (createSymlinkManually()) return true;
-
-  // Strategy 3: Wrapper script in npm prefix bin
+  // Try 2: Write shell wrapper to npm global bin
   const prefix = getNpmPrefix();
   if (prefix) {
-    log('Trying wrapper script...');
-    const binDir = path.join(prefix, 'bin');
-    try { fs.mkdirSync(binDir, { recursive: true }); } catch {}
-    if (writeWrapperScript(binDir)) return true;
+    if (writeWrapperScript(path.join(prefix, 'bin'))) return 'wrapper-npm';
   }
 
-  // Strategy 4: Wrapper script in /usr/local/bin (Linux/proot)
-  if (!isTermux) {
-    for (const sysbin of ['/usr/local/bin', '/usr/bin']) {
-      if (fs.existsSync(sysbin)) {
-        log(`Trying wrapper in ${sysbin}...`);
-        if (writeWrapperScript(sysbin)) return true;
-      }
+  // Try 3: System bin dirs
+  for (const dir of ['/usr/local/bin', '/usr/bin']) {
+    if (fs.existsSync(dir)) {
+      if (writeWrapperScript(dir)) return 'wrapper-sys';
     }
   }
 
-  // Strategy 5: Shell alias (works everywhere including Termux)
-  log('Falling back to shell alias...');
+  // Try 4: Shell alias (always works, no permissions needed)
   const aliasFile = addShellAlias();
-  if (aliasFile) {
-    console.log('\n  ✅ Vellum shell alias installed!');
-    console.log(`  Activate now:  source ${aliasFile}`);
-    console.log('  Then use:      vellum --help\n');
-    return true;
-  }
+  if (aliasFile) return `alias:${aliasFile}`;
 
-  return false;
+  return null;
 }
 
-// ── Protect read-only files (NEVER chmod cli.js to 444) ─────────────────────
-// cli.js MUST stay 755 (executable). Only protect non-executable files.
-function protectFiles() {
-  // Read-only, non-executable files (444 = r--r--r--)
-  const readonlyFiles = ['SKILL.md', 'install.js', 'package.json', 'README.md'];
-  for (const f of readonlyFiles) {
+// ── STEP 4: Protect read-only files (NEVER include bin.js or cli.js!) ────────
+function protectReadonlyFiles() {
+  // IMPORTANT: cli.js and bin.js must stay 755 (executable)
+  // Only protect documentation/config files with 444
+  const readOnly = ['SKILL.md', 'package.json', 'README.md', '.gitattributes'];
+  for (const f of readOnly) {
     const fp = path.join(__dirname, f);
     try { if (fs.existsSync(fp)) fs.chmodSync(fp, 0o444); } catch {}
   }
-
-  // cli.js: read+execute for all, write only for owner (755 = rwxr-xr-x)
-  // This is critical — DO NOT set to 444, it would break `vellum` command
-  try { fs.chmodSync(CLI, 0o755); } catch {}
-
-  log('Files protected: SKILL.md, install.js, package.json, README.md → 444');
-  log('cli.js → 755 (read+execute for all users) ✅');
+  // install.js itself: keep readable but lock it
+  try { fs.chmodSync(path.join(__dirname, 'install.js'), 0o444); } catch {}
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+// ── MAIN ──────────────────────────────────────────────────────────────────────
 console.log('\n  ┌─ Vellum Agent Skill Setup ──────────────────┐');
-console.log(`  │  v1.2.0  │  ${platform}  │  ${isTermux ? 'Termux' : isRoot ? 'root' : 'user'}`);
-console.log(`  │  Node ${process.version}  │  ${__dirname.slice(0, 35)}...`);
+console.log(`  │  v1.2.0  ${os.platform()}  ${isTermux ? '[Termux]' : isRoot ? '[root]' : '[user]'}`);
+console.log(`  │  Node ${process.version}`);
 console.log('  └─────────────────────────────────────────────┘\n');
 
-// ALWAYS fix cli.js permissions first — this is the #1 root cause of errors
-fixCliPermissions();
-fixExistingSymlinks();
+// Always fix permissions first — even if already installed
+fixPermissions();
+fixExistingInstalls();
 
-// Install global command if not already present
-const alreadyInstalled = spawnSync('vellum', ['--version'],
-  { encoding: 'utf8', timeout: 3000 }).status === 0;
-
-if (alreadyInstalled) {
-  log('vellum already works globally ✅');
+// Check if vellum already works
+const test = spawnSync('vellum', ['--version'], { encoding: 'utf8', timeout: 3000 });
+if (test.status === 0) {
+  log('vellum already working globally ✅');
 } else {
-  const ok = installGlobal();
-  if (!ok) {
-    console.log('\n  ──────────────────────────────────────────────');
-    console.log('  Manual setup (copy & paste one of these):');
-    console.log(`\n  Option A — alias:`);
-    console.log(`    echo "alias vellum=\\'node \\"${CLI}\\"\\'" >> ~/.bashrc && source ~/.bashrc`);
-    console.log(`\n  Option B — direct call:`);
-    console.log(`    node ${CLI} --help`);
-    console.log('  ──────────────────────────────────────────────\n');
+  const result = installGlobal();
+  if (!result) {
+    console.log('\n  ── Manual setup ─────────────────────────────');
+    console.log(`  node "${BIN_JS}" --help`);
+    console.log(`  echo "alias vellum='node \\"${BIN_JS}\\"'" >> ~/.bashrc`);
+    console.log('  source ~/.bashrc');
+    console.log('  ─────────────────────────────────────────────\n');
+  } else if (result.startsWith('alias:')) {
+    const f = result.split(':')[1];
+    console.log('\n  ✅ Installed via shell alias');
+    console.log(`  Activate: source ${f}`);
+    console.log('  Then run: vellum --help\n');
   }
 }
 
-// Protect files last (after permissions are already correct)
-protectFiles();
+// Protect files LAST — and NEVER touch bin.js or cli.js with 444
+protectReadonlyFiles();
+// Re-ensure executables stay at 755 after protectReadonlyFiles
+try { fs.chmodSync(BIN_JS, 0o755); } catch {}
+try { fs.chmodSync(CLI_JS, 0o755); } catch {}
+
 console.log('');
