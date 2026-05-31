@@ -1,3 +1,4 @@
+
 {
   "name": "vellum-agent-skill",
   "version": "1.2.0",
@@ -8,38 +9,40 @@
     "node": ">=18.0.0"
   },
   "bin": {
-    "vellum": "./cli.js"
+    "vellum": "./bin.js"
   },
   "files": [
+    "bin.js",
     "cli.js",
     "install.js",
     "SKILL.md",
-    "README.md"
+    "README.md",
+    ".gitattributes"
   ],
   "scripts": {
-    "start":       "node cli.js",
-    "prepare":     "chmod 755 cli.js || true",
-    "preinstall":  "node -e \"require('fs').chmodSync('cli.js', 0o755)\" || true",
+    "start": "node cli.js",
+    "prepare": "chmod 755 bin.js cli.js install.js 2>/dev/null || node -e \"['bin.js','cli.js','install.js'].forEach(f=>{try{require('fs').chmodSync(f,0o755)}catch{}})\"",
+    "preinstall": "node -e \"try{require('fs').chmodSync('cli.js',0o755)}catch{}\" 2>/dev/null || true",
     "postinstall": "node install.js || true"
   },
   "keywords": [
-    "ai-agent", "skill", "base", "blockchain", "payments",
-    "x402", "trading", "vellum", "mcp", "claude", "gemini",
-    "uniswap", "uniswap-v3", "uniswap-v4", "switch-agent", "multi-agent"
+    "ai-agent",
+    "skill",
+    "base",
+    "blockchain",
+    "payments",
+    "x402",
+    "trading",
+    "vellum",
+    "mcp",
+    "claude",
+    "gemini",
+    "uniswap",
+    "uniswap-v3",
+    "uniswap-v4",
+    "switch-agent",
+    "multi-agent"
   ],
-  "author": "Vellum Finance",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Vellum-Finance/vellum-agent-skill.git"
-  },
-  "homepage": "https://github.com/Vellum-Finance/vellum-agent-skill#readme",
-  "dependencies": {
-    "commander": "^13.0.0",
-    "ethers": "^6.13.0",
-    "uuid": "^11.0.0"
-  }
-}
   "author": "Vellum Finance",
   "license": "MIT",
   "repository": {
