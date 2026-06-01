@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * install.js — Vellum Agent Skill v1.2.0
+ * install.js — Vellum Agent Skill v1.3.0
  * Runs via postinstall + SKILL.md postInstall hook.
  */
 
@@ -187,7 +187,7 @@ function protectReadonlyFiles() {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 console.log('\n  ┌─ Vellum Agent Skill Setup ──────────────────┐');
-console.log(`  │  v1.2.0  ${os.platform()}  ${isTermux ? '[Termux]' : isRoot ? '[root]' : '[user]'}`);
+console.log(`  │  v1.3.0  ${os.platform()}  ${isTermux ? '[Termux]' : isRoot ? '[root]' : '[user]'}`);
 console.log(`  │  Node ${process.version}`);
 console.log('  └─────────────────────────────────────────────┘\n');
 
