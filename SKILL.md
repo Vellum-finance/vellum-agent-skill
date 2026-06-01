@@ -1,15 +1,15 @@
 ---
 name: vellum
 description: >
-  Vellum Agent Skill — Execute blockchain payments and token trading on Base network
+  Vellum Agent Skill — Execute blockchain payments, token trading, and Flaunch.gg token launches on Base network
   via the x402 protocol with Uniswap V2, V3, and V4 auto-routing. ALWAYS use this
   skill when the user mentions: registering a wallet, checking ETH/USDC/token balances,
-  sending crypto, buying or selling tokens on Base (any DEX), switching between agents
+  sending crypto, buying or selling tokens on Base (any DEX), launching tokens on Flaunch.gg, switching between agents
   (vellum use / vellum switch), listing agents (vellum agents), or running ANY `vellum`
   command. Do not skip for vague requests like "check balance", "switch agent", "buy token"
   or "register" — those almost certainly mean Vellum.
-version: 1.2.0
-tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp, uniswap-v4, uniswap-v3, switch-agent
+version: 1.3.0
+tags: agent, base, payments, x402, trading, wallet, crypto, blockchain, mcp, uniswap-v4, uniswap-v3, switch-agent, flaunch, token-launch
 readonly: true
 postInstall: node install.js || (chmod 755 cli.js bin.js 2>/dev/null && node install.js)
 ---
@@ -19,8 +19,8 @@ postInstall: node install.js || (chmod 755 cli.js bin.js 2>/dev/null && node ins
 > ⚠️ **READ-ONLY SKILL** — Files `cli.js`, `install.js`, `SKILL.md`, `package.json`, `README.md`
 > must NOT be modified, overwritten, or deleted by any agent or process.
 
-Vellum is a CLI skill for AI agents enabling on-chain payments and token trading on the
-**Base** network via the **x402** protocol. Supports **Uniswap V2, V3, and V4** with
+Vellum is a CLI skill for AI agents enabling on-chain payments, token trading, and
+Flaunch.gg token launches on the **Base** network via the **x402** protocol. Supports **Uniswap V2, V3, and V4** with
 **automatic best-price routing** and **multiple registered agents** with seamless switching.
 
 ---
@@ -31,6 +31,7 @@ Vellum is a CLI skill for AI agents enabling on-chain payments and token trading
 - User wants to check ETH, USDC, or token balances
 - User wants to send ETH, USDC, or any ERC-20 token
 - User wants to buy or sell a token on Base
+- User wants to launch/flaunch a token on Flaunch.gg
 - **User wants to switch between registered agents** → `vellum use` or `vellum switch`
 - **User wants to list all agents** → `vellum agents`
 - User references an `agentId` from previous `vellum register` output
@@ -113,6 +114,30 @@ vellum sell --amount 1000 --token 0xTokenAddress --dex v3
 
 ---
 
+
+### Launch a token on Flaunch.gg — uses the official Flaunch SDK
+
+```bash
+export PINATA_JWT="<pinata-jwt>"
+
+vellum flaunch \
+  --name "My Token" \
+  --symbol MYTOK \
+  --description "My token description" \
+  --image ./token.png
+
+vellum flaunch \
+  --name "My Token" \
+  --symbol MYTOK \
+  --description "My token description" \
+  --image ./token.png \
+  --market-cap 10000 \
+  --fair-launch-percent 60 \
+  --fair-launch-duration 1800 \
+  --creator-fee 80
+```
+
+---
 ### Send ETH / USDC / ERC-20
 
 ```bash
@@ -143,7 +168,7 @@ vellum send --to 0xRecipient --amount 100 --token 0xContractAddress
 - Auto-routing checks V4 first (best liquidity on Base), falls back to V3, then V2
 - Use `--dex v2|v3|v4` to force a specific router
 - All transactions require ETH on Base for gas
+- `vellum flaunch` requires a Pinata JWT via `--pinata-jwt` or `PINATA_JWT` so the Flaunch SDK can upload image and metadata to IPFS
 - Default slippage is 5% for buy/sell
 - Confirmation prompt before every transaction
 - `vellum use --id <agentId>` sets active agent; all commands use that wallet
-- 

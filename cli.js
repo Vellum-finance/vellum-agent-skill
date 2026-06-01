@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Vellum Agent Skill — cli.js  v1.2.0
+ * Vellum Agent Skill — cli.js  v1.3.0
  * READ-ONLY: This file is protected. Do not modify, overwrite, or delete.
  * Owned by Vellum Finance. https://github.com/Vellum-finance/vellum-agent-skill
  *
@@ -23,6 +23,13 @@ const BASE_RPC      = 'https://mainnet.base.org';
 const USDC_ADDRESS  = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const WETH_ADDRESS  = '0x4200000000000000000000000000000000000006';
 const WALLET_FILE   = path.join(os.homedir(), '.vellum-wallet.json');
+
+const FLAUNCH_DEFAULT_FAIR_LAUNCH_PERCENT = 60;
+const FLAUNCH_DEFAULT_FAIR_LAUNCH_DURATION = 30 * 60;
+const FLAUNCH_DEFAULT_MARKET_CAP_USD = 10_000;
+const FLAUNCH_DEFAULT_CREATOR_FEE_PERCENT = 80;
+const FLAUNCH_SUPPORTED_NETWORKS = ['base', 'base-sepolia'];
+
 
 // ── ROUTER ADDRESSES (Base Mainnet — verified from docs.uniswap.org) ──────────
 // Uniswap V2
@@ -169,6 +176,62 @@ const withTimeout = (promise, ms = 10000, fallback = null) =>
     promise,
     new Promise((res) => setTimeout(() => res(fallback), ms)),
   ]);
+
+
+// ── FLAUNCH HELPERS ──────────────────────────────────────────────────────────
+function detectImageMime(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.gif') return 'image/gif';
+  return 'image/png';
+}
+
+function loadBase64Image(imageInput) {
+  if (!imageInput) return null;
+  if (imageInput.startsWith('data:image/')) return imageInput;
+
+  const resolved = path.resolve(imageInput);
+  if (fs.existsSync(resolved)) {
+    const data = fs.readFileSync(resolved).toString('base64');
+    return `data:${detectImageMime(resolved)};base64,${data}`;
+  }
+
+  if (/^[A-Za-z0-9+/=\r\n]+$/.test(imageInput) && imageInput.length > 100) {
+    return `data:image/png;base64,${imageInput.replace(/\s/g, '')}`;
+  }
+
+  return null;
+}
+
+function parsePositiveNumber(value, label) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.error(`\n❌ ${label} must be a positive number.\n`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value, label) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    console.error(`\n❌ ${label} must be a non-negative integer.\n`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+async function loadFlaunchModules() {
+  const [{ createFlaunch }, viem, chains, accounts] = await Promise.all([
+    import('@flaunch/sdk'),
+    import('viem'),
+    import('viem/chains'),
+    import('viem/accounts'),
+  ]);
+  return { createFlaunch, viem, chains, accounts };
+}
 
 // ── APPROVE HELPER ────────────────────────────────────────────────────────────
 async function ensureApproval(tokenContract, spender, amount, wallet) {
@@ -747,6 +810,120 @@ program
     }
   });
 
+
+// ── FLAUNCH TOKEN ────────────────────────────────────────────────────────────
+program
+  .command('flaunch')
+  .description('Launch a new token on Flaunch.gg using the official Flaunch SDK')
+  .requiredOption('--name <name>', 'Token name')
+  .requiredOption('--symbol <symbol>', 'Token symbol/ticker')
+  .requiredOption('--description <description>', 'Token description for metadata')
+  .requiredOption('--image <path|base64|data-url>', 'Token image file path, base64 string, or data:image URL')
+  .option('--pinata-jwt <jwt>', 'Pinata JWT for SDK IPFS uploads (or set PINATA_JWT)')
+  .option('--fair-launch-percent <percent>', 'Supply percent for fair launch (default: 60)', String(FLAUNCH_DEFAULT_FAIR_LAUNCH_PERCENT))
+  .option('--fair-launch-duration <seconds>', 'Fair launch duration in seconds (default: 1800)', String(FLAUNCH_DEFAULT_FAIR_LAUNCH_DURATION))
+  .option('--market-cap <usd>', 'Initial market cap in USD (default: 10000)', String(FLAUNCH_DEFAULT_MARKET_CAP_USD))
+  .option('--creator <address>', 'Creator/revenue recipient address (default: active wallet)')
+  .option('--creator-fee <percent>', 'Creator fee allocation percent (default: 80)', String(FLAUNCH_DEFAULT_CREATOR_FEE_PERCENT))
+  .option('--website <url>', 'Project website URL')
+  .option('--twitter <url>', 'Twitter/X URL')
+  .option('--telegram <url>', 'Telegram URL')
+  .option('--discord <url>', 'Discord URL')
+  .option('--network <base|base-sepolia>', 'Flaunch network (default: base)', 'base')
+  .action(async (opts) => {
+    const network = opts.network.toLowerCase();
+    if (!FLAUNCH_SUPPORTED_NETWORKS.includes(network)) {
+      console.error('\n❌ --network must be base or base-sepolia\n');
+      process.exit(1);
+    }
+
+    const pinataJWT = opts.pinataJwt || process.env.PINATA_JWT;
+    if (!pinataJWT) {
+      console.error('\n❌ Missing Pinata JWT for Flaunch SDK IPFS upload.');
+      console.error('   Pass --pinata-jwt <jwt> or set PINATA_JWT.\n');
+      process.exit(1);
+    }
+
+    const base64Image = loadBase64Image(opts.image);
+    if (!base64Image) {
+      console.error('\n❌ Invalid --image. Provide an existing image path, data:image URL, or base64 image string.\n');
+      process.exit(1);
+    }
+
+    const wallet = loadWallet();
+    const creator = opts.creator || wallet.address;
+    if (!ethers.isAddress(creator)) {
+      console.error('\n❌ Invalid --creator address.\n');
+      process.exit(1);
+    }
+
+    const fairLaunchPercent = parsePositiveNumber(opts.fairLaunchPercent, '--fair-launch-percent');
+    const fairLaunchDuration = parseNonNegativeInteger(opts.fairLaunchDuration, '--fair-launch-duration');
+    const initialMarketCapUSD = parsePositiveNumber(opts.marketCap, '--market-cap');
+    const creatorFeeAllocationPercent = parsePositiveNumber(opts.creatorFee, '--creator-fee');
+
+    if (fairLaunchPercent > 100) {
+      console.error('\n❌ --fair-launch-percent cannot be greater than 100.\n');
+      process.exit(1);
+    }
+
+    if (creatorFeeAllocationPercent > 100) {
+      console.error('\n❌ --creator-fee cannot be greater than 100.\n');
+      process.exit(1);
+    }
+
+    const ok = await confirm(`\n  Launch ${opts.name} ($${opts.symbol}) on Flaunch ${network}?`);
+    if (!ok) { console.log('\n  Cancelled.\n'); process.exit(0); }
+
+    const { createFlaunch, viem, chains, accounts } = await loadFlaunchModules();
+    const chain = network === 'base-sepolia' ? chains.baseSepolia : chains.base;
+    const explorer = network === 'base-sepolia' ? 'https://sepolia.basescan.org/tx/' : 'https://basescan.org/tx/';
+    const privateKey = wallet.privateKey.startsWith('0x') ? wallet.privateKey : `0x${wallet.privateKey}`;
+    const account = accounts.privateKeyToAccount(privateKey);
+    const rpcUrl = network === 'base-sepolia'
+      ? (process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org')
+      : (process.env.BASE_RPC_URL || BASE_RPC);
+
+    const publicClient = viem.createPublicClient({ chain, transport: viem.http(rpcUrl) });
+    const walletClient = viem.createWalletClient({ account, chain, transport: viem.http(rpcUrl) });
+    const flaunchWrite = createFlaunch({ publicClient, walletClient });
+
+    const payload = {
+      name: opts.name,
+      symbol: opts.symbol.toUpperCase(),
+      fairLaunchPercent,
+      fairLaunchDuration,
+      initialMarketCapUSD,
+      creator,
+      creatorFeeAllocationPercent,
+      metadata: {
+        base64Image,
+        description: opts.description,
+        ...(opts.website ? { websiteUrl: opts.website } : {}),
+        ...(opts.discord ? { discordUrl: opts.discord } : {}),
+        ...(opts.twitter ? { twitterUrl: opts.twitter } : {}),
+        ...(opts.telegram ? { telegramUrl: opts.telegram } : {}),
+      },
+      pinataConfig: { jwt: pinataJWT },
+    };
+
+    try {
+      console.log('\n  🚀 Uploading metadata and submitting Flaunch transaction...');
+      const hash = await flaunchWrite.flaunchIPFS(payload);
+      console.log(`\n  ⏳ Submitted: ${hash}`);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status !== 'success') {
+        console.error(`  ❌ Flaunch transaction reverted.\n  ${explorer}${hash}\n`);
+        process.exit(1);
+      }
+      console.log(`  ✅ Flaunch successful! Block: ${receipt.blockNumber}`);
+      console.log(`  ${explorer}${hash}\n`);
+    } catch (e) {
+      console.error(`\n  ❌ Flaunch failed: ${e.shortMessage || e.message}\n`);
+      process.exit(1);
+    }
+  });
+
 // ── SEND ──────────────────────────────────────────────────────────────────────
 program
   .command('send')
@@ -795,7 +972,7 @@ program
 // ── META ──────────────────────────────────────────────────────────────────────
 program
   .name('vellum')
-  .description('Vellum Agent Skill — Payments & Trading on Base (V2 + V3 + V4 auto-routing)')
-  .version('1.2.0');
+  .description('Vellum Agent Skill — Payments, Trading & Flaunch token launches on Base')
+  .version('1.3.0');
 
 program.parse();

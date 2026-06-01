@@ -1,13 +1,13 @@
 # Vellum Agent Skill
 
 ![Vellum](https://img.shields.io/badge/Vellum-Agent_Skill-blue?style=for-the-badge)
-[![Version](https://img.shields.io/badge/Version-1.2.0-orange.svg)](https://github.com/vellum-finance/vellum-agent-skill)
+[![Version](https://img.shields.io/badge/Version-1.3.0-orange.svg)](https://github.com/vellum-finance/vellum-agent-skill)
 [![Platform](https://img.shields.io/badge/Network-Base_Blockchain-purple.svg)](https://base.org)
 [![Uniswap](https://img.shields.io/badge/DEX-V2+V3+V4-pink.svg)](https://uniswap.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-**The Official Vellum Skill for AI Agents** — On-chain payments and token trading on Base
-via Uniswap V2, V3, and V4 with automatic best-price routing. Works with Claude, Gemini,
+**The Official Vellum Skill for AI Agents** — On-chain payments, token trading, and
+Flaunch.gg token launches on Base via Uniswap V2, V3, and V4 with automatic best-price routing. Works with Claude, Gemini,
 GPT, Hermes, Openclaw, and any MCP-compatible agent.
 
 ---
@@ -78,6 +78,32 @@ vellum sell --amount 1000 --token 0xTokenAddress --dex v4
 vellum sell --amount 1000 --token 0xTokenAddress --slippage 10
 ```
 
+
+### Launch token on Flaunch.gg ⭐
+```bash
+# Requires the active Vellum wallet plus a Pinata JWT for SDK IPFS uploads
+export PINATA_JWT="<pinata-jwt>"
+
+vellum flaunch \
+  --name "My Token" \
+  --symbol MYTOK \
+  --description "My token description" \
+  --image ./token.png
+
+# Optional launch parameters
+vellum flaunch \
+  --name "My Token" \
+  --symbol MYTOK \
+  --description "My token description" \
+  --image ./token.png \
+  --market-cap 10000 \
+  --fair-launch-percent 60 \
+  --fair-launch-duration 1800 \
+  --creator-fee 80 \
+  --website https://example.com \
+  --twitter https://x.com/example
+```
+
 ### Send ETH / USDC / ERC-20
 ```bash
 vellum send --to 0xRecipient --amount 0.01 --token ETH
@@ -97,6 +123,7 @@ vellum send --to 0xRecipient --amount 100 --token 0xContractAddress
 | `balance` | Reads ETH + USDC (+ optional token) balance from Base RPC |
 | `buy` | Auto-routes: probes V4 pools → V3 pools → V2, picks best quote |
 | `sell` | Auto-routes: same logic, picks highest ETH output |
+| `flaunch` | Uses the official Flaunch SDK to upload token metadata/image to IPFS and launch through Flaunch.gg |
 | `send` | Transfers ETH, USDC, or any ERC-20 directly on-chain |
 
 ---
